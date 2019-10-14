@@ -7,14 +7,13 @@ import com.aries.extension.util.PropertyUtil
 
 class LoginAdapter : LoginHandler {
     override fun preHandle(id: String, password: String): UserData? {
-        LogUtil.info("Starting authentication ($id,$password)")
+        LogUtil.info("Starting authentication ($id)")
 
         val serverUrl = PropertyUtil.getValue(EXT_ID, "serverUrl", "")
         val baseRdn = PropertyUtil.getValue(EXT_ID, "baseRdn", "")
-        val adminId = PropertyUtil.getValue(EXT_ID, "adminId", "")
-        val adminPwd = PropertyUtil.getValue(EXT_ID, "adminPwd", "")
+        val baseOu = PropertyUtil.getValue(EXT_ID, "baseOu", "")
 
-        return if (LdapConnector.connect(id, password, serverUrl, baseRdn, adminId, adminPwd)) {
+        return if (LdapConnector2.connect(id, password, serverUrl, baseRdn, baseOu)) {
             UserData(id, password, "admin", "Tester")
         } else null
 
@@ -28,3 +27,28 @@ class LoginAdapter : LoginHandler {
         const val EXT_ID = "ldap_adapter"
     }
 }
+
+//fun main(args: Array<String>) {
+//
+//    //172.18.220.139
+////yong.sang.kwon
+////Naya180500
+//
+//// jennifer_bindid
+//// Password123456
+//
+////    LdapConnector.connect(
+////            "jennifer_bindid",
+////            "Password123456",
+////            "LDAP://WIN-AD1.CPFB-ACN.SG",
+////            "CN=Users,DC=CPFB-ACN,DC=SG",
+////            "CN=jennifer_bindid,CN=Users,DC=CPFB-ACN,DC=SG",
+////            "Password123456")
+//
+//    LdapConnector2.connect(
+//            "yong.sang.kwon",
+//            "Naya180500",
+//            "LDAP://WIN-AD1.CPFB-ACN.SG",
+//            "CN=Users,DC=CPFB-ACN,DC=SG",
+//            "JenniferSoft")
+//}

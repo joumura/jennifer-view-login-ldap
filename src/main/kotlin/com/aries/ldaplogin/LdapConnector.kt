@@ -56,6 +56,7 @@ object LdapConnector {
             }
             return false
         } catch (e: NamingException) {
+            LogUtil.error(e.message)
             return false
         }
 
