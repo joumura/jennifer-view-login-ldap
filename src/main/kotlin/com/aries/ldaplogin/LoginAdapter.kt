@@ -12,11 +12,11 @@ class LoginAdapter : LoginHandler {
         val serverUrl = PropertyUtil.getValue(EXT_ID, "serverUrl", "")
         val baseRdn = PropertyUtil.getValue(EXT_ID, "baseRdn", "")
         val baseOu = PropertyUtil.getValue(EXT_ID, "baseOu", "")
+        val userGroup = PropertyUtil.getValue(EXT_ID, "userGroup", "guest")
 
         return if (LdapConnector2.connect(id, password, serverUrl, baseRdn, baseOu)) {
-            UserData(id, password, "admin", "Tester")
+            UserData(id, password, userGroup, id)
         } else null
-
     }
 
     override fun redirect(id: String, password: String): String {
