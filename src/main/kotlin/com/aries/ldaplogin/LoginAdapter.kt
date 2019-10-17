@@ -27,28 +27,3 @@ class LoginAdapter : LoginHandler {
         const val EXT_ID = "ldap_adapter"
     }
 }
-
-//fun main(args: Array<String>) {
-//
-//    //172.18.220.139
-////yong.sang.kwon
-////Naya180500
-//
-//// jennifer_bindid
-//// Password123456
-//
-////    LdapConnector.connect(
-////            "jennifer_bindid",
-////            "Password123456",
-////            "LDAP://WIN-AD1.CPFB-ACN.SG",
-////            "CN=Users,DC=CPFB-ACN,DC=SG",
-////            "CN=jennifer_bindid,CN=Users,DC=CPFB-ACN,DC=SG",
-////            "Password123456")
-//
-//    LdapConnector2.connect(
-//            "yong.sang.kwon",
-//            "Naya180500",
-//            "LDAP://WIN-AD1.CPFB-ACN.SG",
-//            "CN=Users,DC=CPFB-ACN,DC=SG",
-//            "JenniferSoft")
-//}
