@@ -23,5 +23,5 @@ Adapter options are shown in the table below.
 | ------------- |:-------------:|
 | serverUrl       | LDAP://127.0.0.0 |
 | baseRdn   | cn=admin,dc=admin,dc=com |
-| adminId | cn=Administrator,cn=admin,dc=admin,dc=com |
-| adminPwd | 1234 |
+| baseOu | |
+| usergroup | guest |
