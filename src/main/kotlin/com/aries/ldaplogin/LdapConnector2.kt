@@ -19,6 +19,7 @@ object LdapConnector2 {
         env[Context.SECURITY_AUTHENTICATION] = "simple"
         env[Context.SECURITY_PRINCIPAL] = usrId
         env[Context.SECURITY_CREDENTIALS] = usrPw
+        env[Context.REFERRAL] = "follow"
 
         try {
             val ctx = InitialLdapContext(env, null)
@@ -28,6 +29,9 @@ object LdapConnector2 {
             ctls.searchScope = SearchControls.SUBTREE_SCOPE
 
             val answer = ctx.search(baseRdn, String.format("(cn=%s)", usrId), ctls)
+            if (!answer.hasMore()) {
+                LogUtil.info("User authentication succeeded but the user could not be found in 'baseRdn'")
+            }
 
             while (answer.hasMore()) {
                 val searchResult = answer.next() as SearchResult
@@ -43,6 +47,8 @@ object LdapConnector2 {
                     }
                 }
             }
+
+            LogUtil.info("Active Directory Authentication: $result")
 
             ctx.close()
         } catch (e: AuthenticationException) {
