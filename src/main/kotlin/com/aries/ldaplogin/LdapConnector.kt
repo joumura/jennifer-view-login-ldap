@@ -1,18 +1,22 @@
 package com.aries.ldaplogin
 
+import com.aries.extension.util.LogUtil
+import java.lang.NullPointerException
+import java.util.*
 import javax.naming.AuthenticationException
 import javax.naming.Context
 import javax.naming.NamingException
+import javax.naming.directory.DirContext
 import javax.naming.directory.SearchControls
+import javax.naming.directory.SearchResult
 import javax.naming.ldap.InitialLdapContext
-import java.util.Hashtable
-import com.aries.extension.util.LogUtil
+
 
 object LdapConnector {
     fun connect(usrId: String, usrPw: String,
                 url: String="",  baseRdn: String="",
                 ntUserId: String="", ntPasswd: String=""): Boolean {
-        val initialLdapContext: InitialLdapContext = try {
+        try {
             val env = Hashtable<String, String>()
             env[Context.INITIAL_CONTEXT_FACTORY] = "com.sun.jndi.ldap.LdapCtxFactory"
             env[Context.PROVIDER_URL] = url
@@ -23,26 +27,17 @@ object LdapConnector {
             val ctx = InitialLdapContext(env, null)
             LogUtil.info("Active Directory Connection: CONNECTED")
 
-            // Hashtable 부터 LdapContext까지 LDAP 접속의 대한 인증을 합니다. ntUserId, ntPasswd, url 세가지로 연결 확인을 합니다.
-            // 정상적인 연결이 되면 "CONNECTED"가 출력됩니다.
-            val ctls = SearchControls()
-            ctls.searchScope = SearchControls.SUBTREE_SCOPE
-            ctls.returningAttributes = arrayOf("cn")
-
-            // 인증이 확인 됬다면 usrId, usrPw, baseRdn(유저가 등록된 위치)으로 Admin에서 등록한 유저를 찾아봅시다!
-            val searchFilter = String.format("(cn=%s)", usrId)
-            val results = ctx.search(baseRdn, searchFilter, ctls)
+            val results = findAccountByAccountName(ctx, baseRdn, usrId)
+            val user = results!!.nameInNamespace
 
             val usrEnv = Hashtable<String, String>()
             usrEnv[Context.INITIAL_CONTEXT_FACTORY] = "com.sun.jndi.ldap.LdapCtxFactory"
             usrEnv[Context.PROVIDER_URL] = url
             usrEnv[Context.SECURITY_AUTHENTICATION] = "simple"
-            usrEnv[Context.SECURITY_PRINCIPAL] = String.format("%s=%s,%s", "cn", usrId, baseRdn)
+            usrEnv[Context.SECURITY_PRINCIPAL] = user
             usrEnv[Context.SECURITY_CREDENTIALS] = usrPw
 
             InitialLdapContext(usrEnv, null)
-            // 이 부분도 마찬가지로 ID, PW, 유저가 등록된 위치로 유저를 찾습니다.
-            // 아래는 Active Directory에서 발생한 에러처리 입니다.
         } catch (e: AuthenticationException) {
             val msg = e.message!!
             when {
@@ -58,8 +53,29 @@ object LdapConnector {
         } catch (e: NamingException) {
             LogUtil.error(e.message)
             return false
+        } catch (e: NullPointerException) {
+            LogUtil.error("User not found in namespace")
+            return false
         }
 
         return true
+    }
+
+    @Throws(NamingException::class)
+    fun findAccountByAccountName(ctx: DirContext, ldapSearchBase: String?, accountName: String): SearchResult? {
+        val searchFilter = "(&(objectClass=user)(sAMAccountName=$accountName))"
+        val searchControls = SearchControls()
+        searchControls.searchScope = SearchControls.SUBTREE_SCOPE
+        val results = ctx.search(ldapSearchBase, searchFilter, searchControls)
+        var searchResult: SearchResult? = null
+        if (results.hasMoreElements()) {
+            searchResult = results.nextElement() as SearchResult
+            //make sure there is not another item available, there should be only 1 match
+            if (results.hasMoreElements()) {
+                LogUtil.error("Matched multiple users for the accountName: $accountName")
+                return null
+            }
+        }
+        return searchResult
     }
 }
