@@ -23,5 +23,6 @@ Adapter options are shown in the table below.
 | ------------- |:-------------:|
 | serverUrl       | LDAP://127.0.0.0 |
 | baseRdn   | cn=admin,dc=admin,dc=com |
-| baseOu | JenniferSoft |
-| usergroup | guest |
+| adminId |  |
+| adminPwd |  |
+| useGroup | guest |
