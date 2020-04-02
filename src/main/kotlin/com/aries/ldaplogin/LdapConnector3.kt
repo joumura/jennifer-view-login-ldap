@@ -11,12 +11,11 @@ import javax.naming.directory.SearchControls
 import javax.naming.directory.SearchResult
 import javax.naming.ldap.InitialLdapContext
 
-object LdapConnector {
+
+object LdapConnector3 {
     fun connect(usrId: String, usrPw: String,
                 url: String="",  baseRdn: String="",
-                ntUserId: String="", ntPasswd: String="",
-                groupPrefix: List<String> = emptyList(), baseOu: String="",
-                fixedGroup: String = ""): String? {
+                ntUserId: String="", ntPasswd: String=""): Boolean {
         try {
             val env = Hashtable<String, String>()
             env[Context.INITIAL_CONTEXT_FACTORY] = "com.sun.jndi.ldap.LdapCtxFactory"
@@ -30,19 +29,16 @@ object LdapConnector {
 
             val results = findAccountByAccountName(ctx, baseRdn, usrId)
             val user = results!!.nameInNamespace
+
+            // https://stackoverflow.com/questions/12317205/ldap-authentication-using-java
             val usrEnv = Hashtable<String, String>()
             usrEnv[Context.INITIAL_CONTEXT_FACTORY] = "com.sun.jndi.ldap.LdapCtxFactory"
             usrEnv[Context.PROVIDER_URL] = url
             usrEnv[Context.SECURITY_AUTHENTICATION] = "simple"
             usrEnv[Context.SECURITY_PRINCIPAL] = user
             usrEnv[Context.SECURITY_CREDENTIALS] = usrPw
+
             InitialLdapContext(usrEnv, null)
-
-            // fixedGroup 옵션을 사용하면, OU와 CN 체크를하지 않는다.
-            if (fixedGroup != "")
-                return fixedGroup
-
-            return getJenniferUserGroup(results, groupPrefix, baseOu)
         } catch (e: AuthenticationException) {
             val msg = e.message!!
             when {
@@ -54,16 +50,16 @@ object LdapConnector {
                 msg.indexOf("data 701") > 0 -> LogUtil.warn("The account has expired in AD (701)")
                 else -> LogUtil.info("The login was successful")
             }
-            return null
+            return false
         } catch (e: NamingException) {
             LogUtil.error(e.message)
-            return null
+            return false
         } catch (e: NullPointerException) {
             LogUtil.error("User not found in namespace")
-            return null
+            return false
         }
 
-        return null
+        return true
     }
 
     @Throws(NamingException::class)
@@ -75,7 +71,6 @@ object LdapConnector {
         var searchResult: SearchResult? = null
         if (results.hasMoreElements()) {
             searchResult = results.nextElement() as SearchResult
-
             //make sure there is not another item available, there should be only 1 match
             if (results.hasMoreElements()) {
                 LogUtil.error("Matched multiple users for the accountName: $accountName")
@@ -83,47 +78,5 @@ object LdapConnector {
             }
         }
         return searchResult
-    }
-
-    private fun getJenniferUserGroup(results: SearchResult, groupPrefix: List<String> = emptyList(), baseOu: String=""): String? {
-        val attributes = results!!.attributes
-        val memberOf = attributes["memberOf"]
-
-        if (memberOf != null) {
-            for (i in 0 until memberOf.size()) {
-                val ouList = takeValues(memberOf[i].toString(), "OU")
-                val cnList = takeValues(memberOf[i].toString(), "CN")
-
-                // baseOu 옵션을 사용할 경우
-                if (baseOu != "" && !ouList.contains(baseOu)) {
-                    LogUtil.error("The set 'baseOu' does not contain any users")
-                    return null
-                }
-
-                // groupPrefix 옵션을 사용할 경우
-                if (groupPrefix.isNotEmpty()) {
-                    groupPrefix.forEach { prefix ->
-                        val cn = cnList.filter { it.startsWith(prefix) }
-                        if (cn.isNotEmpty())
-                            return cn[0]
-                    }
-                }
-            }
-        }
-
-        LogUtil.error("The group of LDAP users does not belong to the JENNIFER user group")
-        return null
-    }
-
-    private fun takeValues(args: String, key: String): Set<String> {
-        val result = HashSet<String>()
-        val tokens = args.split(",")
-        for (token in tokens) {
-            val keyAndValue = token.split("=")
-            if (key == keyAndValue[0]) {
-                result.add(keyAndValue[1])
-            }
-        }
-        return result
     }
 }

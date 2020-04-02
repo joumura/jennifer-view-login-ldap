@@ -11,11 +11,16 @@ class LoginAdapter : LoginHandler {
 
         val serverUrl = PropertyUtil.getValue(EXT_ID, "serverUrl", "")
         val baseRdn = PropertyUtil.getValue(EXT_ID, "baseRdn", "")
+        val baseOu = PropertyUtil.getValue(EXT_ID, "baseOu", "")
+        val groupPrefix = PropertyUtil.getValue(EXT_ID, "groupPrefix", "")
+        val fixedGroup = PropertyUtil.getValue(EXT_ID, "fixedGroup", "")
         val adminId = PropertyUtil.getValue(EXT_ID, "adminId", "")
         val adminPwd = PropertyUtil.getValue(EXT_ID, "adminPwd", "")
-        val userGroup = PropertyUtil.getValue(EXT_ID, "userGroup", "guest")
 
-        return if (LdapConnector.connect(id, password, serverUrl, baseRdn, adminId, adminPwd)) {
+        val userGroup = LdapConnector.connect(id, password, serverUrl, baseRdn, adminId, adminPwd,
+                groupPrefix.split(","), baseOu, fixedGroup)
+
+        return if (userGroup != null) {
             UserData(id, password, userGroup, id)
         } else null
     }
