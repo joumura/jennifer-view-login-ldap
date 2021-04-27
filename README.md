@@ -38,6 +38,6 @@ Adapter options are shown in the table below.
 
 ## ChangeLog
 
-### 1.2.0
+### forked version: 1.2.0
 - If "adminId" is not specified, try LDAP connection with the ID and password used for login.
 - Get additional items from LDAP. ("name","email","company","department","job title","cellphone")
