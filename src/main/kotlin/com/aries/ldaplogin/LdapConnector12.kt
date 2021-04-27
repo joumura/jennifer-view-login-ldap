@@ -1,5 +1,6 @@
 package com.aries.ldaplogin
 
+import com.aries.extension.data.UserData
 import com.aries.extension.util.LogUtil
 import java.lang.NullPointerException
 import java.util.*
@@ -11,19 +12,24 @@ import javax.naming.directory.SearchControls
 import javax.naming.directory.SearchResult
 import javax.naming.ldap.InitialLdapContext
 
-object LdapConnector {
+object LdapConnector12 {
     fun connect(usrId: String, usrPw: String,
                 url: String="",  baseRdn: String="",
                 ntUserId: String="", ntPasswd: String="",
                 groupPrefix: List<String> = emptyList(), baseOu: String="",
-                fixedGroup: String = ""): String? {
+                fixedGroup: String = "", attrKeys: Hashtable<String, String>): UserData? {
         try {
             val env = Hashtable<String, String>()
             env[Context.INITIAL_CONTEXT_FACTORY] = "com.sun.jndi.ldap.LdapCtxFactory"
             env[Context.PROVIDER_URL] = url
             env[Context.SECURITY_AUTHENTICATION] = "simple"
-            env[Context.SECURITY_PRINCIPAL] = ntUserId
-            env[Context.SECURITY_CREDENTIALS] = ntPasswd
+            if (ntUserId != "") {
+                env[Context.SECURITY_PRINCIPAL] = ntUserId
+                env[Context.SECURITY_CREDENTIALS] = ntPasswd
+            } else {
+                env[Context.SECURITY_PRINCIPAL] = "CN=" + usrId + "," + baseRdn
+                env[Context.SECURITY_CREDENTIALS] = usrPw
+            }
 
             val ctx = InitialLdapContext(env, null)
             LogUtil.info("Active Directory Connection: CONNECTED")
@@ -38,11 +44,25 @@ object LdapConnector {
             usrEnv[Context.SECURITY_CREDENTIALS] = usrPw
             InitialLdapContext(usrEnv, null)
 
+            var userGroup: String?
             // fixedGroup 옵션을 사용하면, OU와 CN 체크를하지 않는다.
-            if (fixedGroup != "")
-                return fixedGroup
+            if (fixedGroup != "") {
+                userGroup = fixedGroup
+            } else {
+                userGroup = getJenniferUserGroup(results, groupPrefix, baseOu)
+            }
+            if (userGroup == null) return null
 
-            return getJenniferUserGroup(results, groupPrefix, baseOu)
+            var nameVal = getAttrVal(attrKeys["name"], results)
+            if (nameVal == "") nameVal = usrId
+            val emailVal = getAttrVal(attrKeys["email"], results)
+            val companyVal = getAttrVal(attrKeys["company"], results)
+            val deptVal = getAttrVal(attrKeys["dept"], results)
+            val jobTitleVal = getAttrVal(attrKeys["jobTitle"], results)
+            val cellphoneVal = getAttrVal(attrKeys["cellphone"], results)
+
+            return UserData(usrId, usrPw, userGroup, nameVal, emailVal,
+                companyVal, deptVal, jobTitleVal, cellphoneVal)
         } catch (e: AuthenticationException) {
             val msg = e.message!!
             when {
@@ -62,8 +82,6 @@ object LdapConnector {
             LogUtil.error("User not found in namespace")
             return null
         }
-
-        return null
     }
 
     @Throws(NamingException::class)
@@ -86,7 +104,7 @@ object LdapConnector {
     }
 
     private fun getJenniferUserGroup(results: SearchResult, groupPrefix: List<String> = emptyList(), baseOu: String=""): String? {
-        val attributes = results!!.attributes
+        val attributes = results.attributes
         val memberOf = attributes["memberOf"]
 
         if (memberOf != null) {
@@ -125,5 +143,14 @@ object LdapConnector {
             }
         }
         return result
+    }
+
+    private fun getAttrVal(key: String?, results: SearchResult): String {
+        if (key.isNullOrBlank()) return ""
+        val attributes = results.attributes
+        if (attributes[key] == null) return ""
+        if (attributes[key].size() == 0) return ""
+        if (attributes[key][0] == null) return ""
+        return attributes[key][0].toString()
     }
 }
